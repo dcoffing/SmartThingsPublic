@@ -8,6 +8,7 @@
    such as the GE 12730 or Leviton VRF01-1LX
    
   Change Log
+  2016-10-19 Parent / Child app to allow for multiple use cases with a single install.
   2016-06-30 added dynamic temperature display on temperature setpoint input text
   2016-06-28 x.1 version update
   			added submitOnChange for motion so to skip minutes input next if no motion selected
@@ -58,19 +59,38 @@ definition(
     author: "Dale Coffing",
     description: "Automatic control for 3 Speed Ceiling Fan using Low, Medium, High speeds with any temperature sensor.",
     category: "My Apps",
+    singleInstance: true,
 	iconUrl: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png", 
    	iconX2Url: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft250x250.png",
 	iconX3Url: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft250x250.png",
 )
 
 preferences {
-	page(name: "mainPage")
-    page(name: "optionsPage")
-    page(name: "aboutPage")
+        page(name: "startPage")
+        page(name: "parentPage")
+        page(name: "childStartPage")
+        page(name: "optionsPage")
+        page(name: "aboutPage")
 }
 
-def mainPage() {
-	dynamicPage(name: "mainPage", title: "Select your devices and settings", install: true, uninstall: true) {
+def startPage() {
+    if (parent) {
+        childStartPage()
+    } else {
+        parentPage()
+    }
+}
+
+def parentPage() {
+	return dynamicPage(name: "parentPage", title: "", nextPage: "", install: false, uninstall: true) {
+        section("Create a new fan automation.") {
+            app(name: "childApps", appName: appName(), namespace: "dcoffing", title: "New Fan Automation", multiple: true)
+        }
+    }
+}
+
+def childStartPage() {
+	dynamicPage(name: "childStartPage", title: "Select your devices and settings", install: true, uninstall: true) {
     
         section("Select a room temperature sensor to control the fan..."){
 			input "tempSensor", "capability.temperatureMeasurement", multiple:false, title: "Temperature Sensor", required: true, submitOnChange: true  
@@ -97,6 +117,11 @@ def mainPage() {
         	page: "optionsPage"
         	)
         }
+        
+        section("Name") {
+        	label(title: "Assign a name", required: false)
+        }
+        
         section("Version Info, User's Guide") {
 // VERSION
 			href (name: "aboutPage", 
@@ -127,12 +152,8 @@ def optionsPage() {
 			input "autoMode", "enum", title: "Enable Ceiling Fan Thermostat?", options: ["NO-Manual","YES-Auto"], required: false
 		}
     	section ("Change SmartApp name, Mode selector") {
-		label title: "Assign a name", required: false
 		mode title: "Set for specific mode(s)", required: false
 		}
-   
-
-	
     }
 }
 
@@ -144,6 +165,8 @@ def aboutPage() {
 	}
 }
 
+private def appName() { return "${parent ? "3 Speed Fan Automation" : "3 Speed Ceiling Fan Thermostat"}" }
+
 def installed() {
 	log.debug "def INSTALLED with settings: ${settings}"
 	initialize()
@@ -154,14 +177,27 @@ def updated() {
 	unsubscribe()
 	initialize()
     handleTemperature(tempSensor.currentTemperature) //call handleTemperature to bypass temperatureHandler method 
-} 
+}
 
 def initialize() {
+
+    if(parent) { 
+    	initChild() 
+    } else {
+    	initParent() 
+    }  
+}
+
+def initChild() {
 	log.debug "def INITIALIZE with settings: ${settings}"
 	subscribe(tempSensor, "temperature", temperatureHandler) //call temperatureHandler method when any reported change to "temperature" attribute
 	if (motionSensor) {
 		subscribe(motionSensor, "motion", motionHandler) //call the motionHandler method when there is any reported change to the "motion" attribute
 	}   
+}
+
+def initParent() {
+	log.debug "Parent Initialized"
 }
                                    //Event Handler Methods                     
 def temperatureHandler(evt) {
