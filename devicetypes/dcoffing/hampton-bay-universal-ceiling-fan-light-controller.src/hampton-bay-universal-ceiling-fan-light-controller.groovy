@@ -14,7 +14,7 @@
  *  Hampton Bay Universal Ceiling Fan/Light Controller Model#MR101Z 
  *  This device handler is specifically for the Home Depot Hampton Bay Universal Ceiling Fan/Light Premier Remote Control model#9943241 
  *
- *  Author: Dale Coffing, Ranga Pedamallu
+ *  Author: Ranga Pedamallu with modification by Dale Coffing
  *  
  
  Change Log
@@ -54,10 +54,10 @@ metadata {
     tiles(scale: 2) {
         multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
             tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
-                attributeState "on", label:'${name}', action:"switch.off", icon:"st.Lighting.light24", backgroundColor:"#79b821", nextState:"turningOff"
-                attributeState "off", label:'${name}', action:"switch.on", icon:"st.Lighting.light24", backgroundColor:"#ffffff", nextState:"turningOn"
-                attributeState "turningOn", label:'${name}', action:"switch.off", icon:"st.Lighting.light24", backgroundColor:"#2179b8", nextState: "turningOn"
-                attributeState "turningOff", label:'${name}', action:"switch.on", icon:"st.Lighting.light24", backgroundColor:"#2179b8", nextState: "turningOff"
+                attributeState "on", label:'${name}', action:"switch.off", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/light.png", backgroundColor:"#79b821", nextState:"turningOff"
+                attributeState "off", label:'${name}', action:"switch.on", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/light.png", backgroundColor:"#ffffff", nextState:"turningOn"
+                attributeState "turningOn", label:'${name}', action:"switch.off", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/light.png", backgroundColor:"#2179b8", nextState: "turningOn"
+                attributeState "turningOff", label:'${name}', action:"switch.on", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/light.png", backgroundColor:"#2179b8", nextState: "turningOff"
             }
             tileAttribute ("device.level", key: "SLIDER_CONTROL") {
                 attributeState "level", action:"switch level.setLevel"
@@ -67,14 +67,14 @@ metadata {
             }
         }
         standardTile("fanOff", "device.fanMode", inactiveLabel: false, width:2, height:2) {
-        	state "default", label: 'Off', action: "fanOff", icon:"st.Home.home30", backgroundColor: "#ffffff", nextState: "turningOff"
-			state "fanOff", label:'Off', action: "fanOff", icon:"st.Home.home30", backgroundColor: "#79b821", nextState: "turningOff"
-			state "turningOff", label:'Off', action: "fanOff", icon:"st.Home.home30", backgroundColor: "#2179b8", nextState: "turningOff"
+        	state "default", label: 'Off', action: "fanOff", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/OnOff.png", backgroundColor: "#ffffff", nextState: "turningOff"
+			state "fanOff", label:'Off', action: "fanOff", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/OnOff.png", backgroundColor: "#79b821", nextState: "turningOff"
+			state "turningOff", label:'Off', action: "fanOff", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/OnOff.png", backgroundColor: "#2179b8", nextState: "turningOff"
 		}
 		standardTile("fanOne", "device.fanMode", inactiveLabel: false, width: 2, height: 2) {
-        	state "default", label: 'One', action: "fanOne", icon:"st.Lighting.light24", backgroundColor: "#ffffff", nextState: "turningOne"
-			state "fanOne", label:'One', action: "fanOne", icon:"st.Lighting.light24", backgroundColor: "#79b821", nextState: "turningOne"
-			state "turningOne", label:'One', action: "fanOne", icon:"st.Lighting.light24", backgroundColor: "#2179b8", nextState: "turningOne"
+        	state "default", label: 'One', action: "fanOne", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/fan.png", backgroundColor: "#ffffff", nextState: "turningOne"
+			state "fanOne", label:'One', action: "fanOne", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/fan.png", backgroundColor: "#79b821", nextState: "turningOne"
+			state "turningOne", label:'One', action: "fanOne", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/fan.png", backgroundColor: "#2179b8", nextState: "turningOne"
   		}
 		standardTile("fanTwo", "device.fanMode", inactiveLabel: false, width: 2, height: 2) {
 			state "default", label: 'Two', action: "fanTwo", icon:"st.Home.home30", backgroundColor: "#ffffff", nextState: "turningTwo"
@@ -92,9 +92,9 @@ metadata {
 			state "turningFour", label:'Four', action: "fanFour", icon:"st.Home.home30", backgroundColor: "#2179b8", nextState: "turningFour"
 		}
         standardTile("fanBreeze", "device.fanMode", inactiveLabel: false, width:2, height:2) {
-        	state "default", label: 'Breeze', action: "fanAuto", icon:"st.Home.home30", backgroundColor: "#ffffff", nextState: "turningBreeze"
-			state "fanAuto", label:'Breeze', action: "fanAuto", icon:"st.Home.home30", backgroundColor: "#79b821", nextState: "turningBreeze"
-			state "turningBreeze", label:'Breeze', action: "fanAuto", icon:"st.Home.home30", backgroundColor: "#2179b8", nextState: "turningBreeze"
+        	state "default", label: 'Breeze', action: "fanAuto", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/breeze.png", backgroundColor: "#ffffff", nextState: "turningBreeze"
+			state "fanAuto", label:'Breeze', action: "fanAuto", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/breeze.png", backgroundColor: "#79b821", nextState: "turningBreeze"
+			state "turningBreeze", label:'Breeze', action: "fanAuto", icon:"https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/devicetypes/dcoffing/hampton-bay-universal-ceiling-fan-light-controller.src/breeze.png", backgroundColor: "#2179b8", nextState: "turningBreeze"
 		}
         standardTile("refresh", "device.refresh", inactiveLabel: false, decoration: "flat", width: 6, height: 2) {
             state "default", label:"", action:"refresh.refresh", icon:"st.secondary.refresh"
