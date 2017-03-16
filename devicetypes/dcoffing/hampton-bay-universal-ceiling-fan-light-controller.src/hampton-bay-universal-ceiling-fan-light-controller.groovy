@@ -15,7 +15,12 @@
  *  This device handler is specifically for the Home Depot Hampton Bay Universal Ceiling Fan/Light Premier Remote Control model#9943241 
  *
  *  Author: Dale Coffing, Ranga Pedamallu
- *  Date: 2017-03-15
+ *  
+ 
+ Change Log
+  2017-03-16 upload icons to github for testing
+  2017-03-16 initial upload
+
  */
 
 
@@ -24,7 +29,7 @@ metadata {
     	name: "Hampton Bay Universal Ceiling Fan/Light Controller", 
         namespace: "dcoffing", 
         author: "Dale Coffing")
- 	{
+{
         
         capability "Actuator"
         capability "Configuration"
