@@ -21,6 +21,7 @@
  *
 
  Change Log
+	   
  17-03-23
             - 
             - all states are now syncing correctly across multiAttribute and standard tiles
@@ -45,7 +46,7 @@
  17-03-16	-initial upload
 
 Things to Do / BUGS
- - 
+ - Breeze status doesn't update to OFF when remote Off-On button pressed
  - main tile is still not operating fanON correctly due to; maybe dynamic state will fix this
  - transitioning to blue background is not happening on all standard tiles, it does on the multiAttribute if I manually trigger it there.
 X - redo colors in each of the fan speeds in the multiAttribute tile
