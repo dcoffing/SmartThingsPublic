@@ -1,15 +1,17 @@
 /*
    Virtual Thermostat for 3 Speed Ceiling Fan Control
    Copyright 2016 SmartThings, Dale Coffing
-   
+    
    This smartapp provides automatic control of Low, Medium, High speeds of a ceiling fan using 
    any temperature sensor with optional motion override. 
    It requires two hardware devices; any temperature sensor and a dimmer type smart fan controller
-   such as the GE 12730 or Leviton VRF01-1LX
+   such as the GE 12730 or Leviton VRF01-1LX. Incorporates contributions from:
+   
+   Eric Vitale (https://github.com/ericvitale/SmartThingsPublic/blob/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
    
   Change Log
   2017-04-11 Added 10.0 selection for Fan Differential Temp to mimic single speed control
-  2016-10-19 Ver2 Parent / Child app to allow for multiple use cases with a single install by @ericvitale
+  2016-10-19 Ver2 Parent / Child app to allow for multiple use cases with a single install - @ericvitale
   2016-06-30 added dynamic temperature display on temperature setpoint input text
   2016-06-28 x.1 version update
   			added submitOnChange for motion so to skip minutes input next if no motion selected
