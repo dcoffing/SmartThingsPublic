@@ -7,8 +7,8 @@
  *  Home Decorators Collection Universal Ceiling Fan/Light Premier Remote Control model#9943241 
  *  Incorporates contributions from:
  *
- *  Ranga Pedamallu
- *  Dale Coffing 
+ *  Ranga Pedamallu  (https://github.com/rangasuman/SmartThings/blob/master/devicetypes/ranga/homedecorators-fan.src/homedecorators-fan.groovy)
+ *  Dale Coffing     (https://github.com/dcoffing/SmartThingsPublic/tree/master/devicetypes/dcoffing/zigbee-ceiling-fan-light.src)
  *
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
