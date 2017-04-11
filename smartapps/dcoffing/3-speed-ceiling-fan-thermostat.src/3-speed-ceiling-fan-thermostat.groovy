@@ -9,7 +9,7 @@
    
   Change Log
   2017-04-11 Added 10.0 selection for Fan Differential Temp to mimic single speed control
-  2016-10-19 Parent / Child app to allow for multiple use cases with a single install by @ericvitale
+  2016-10-19 Ver2 Parent / Child app to allow for multiple use cases with a single install by @ericvitale
   2016-06-30 added dynamic temperature display on temperature setpoint input text
   2016-06-28 x.1 version update
   			added submitOnChange for motion so to skip minutes input next if no motion selected
