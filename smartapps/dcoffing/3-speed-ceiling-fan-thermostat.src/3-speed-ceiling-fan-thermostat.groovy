@@ -138,7 +138,7 @@ def childStartPage() {
 def optionsPage() {
 	dynamicPage(name: "optionsPage", title: "Configure Optional Settings", install: false, uninstall: false) {
        	section("Enter the desired differential temp between fan speeds (default=1.0)..."){
-			input "fanDiffTempString", "enum", title: "Fan Differential Temp", options: ["0.5","1.0","1.5","2.0"], required: false
+			input "fanDiffTempString", "enum", title: "Fan Differential Temp", options: ["0.5","1.0","1.5","2.0","10.0"], required: false
 		}
 		section("Enable ceiling fan thermostat only if motion is detected at (optional, leave blank to not require motion)..."){
 			input "motionSensor", "capability.motionSensor", title: "Select Motion device", required: false, submitOnChange: true
