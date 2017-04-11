@@ -126,7 +126,7 @@ def childStartPage() {
         section("Version Info, User's Guide") {
 // VERSION
 			href (name: "aboutPage", 
-			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:1.1.161019 \n"+"Copyright © 2016 Dale Coffing", 
+			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:2.170411 \n"+"Copyright © 2016 Dale Coffing", 
 			description: "Tap to get user's guide.",
 			image: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png",
 			required: false,
