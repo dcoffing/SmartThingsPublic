@@ -183,7 +183,7 @@ def createLightChild() {
         	it.device.deviceNetworkId == "${device.deviceNetworkId}-Lamp"
     }
     if (!childDevice) {  
-		childDevice = addChildDevice("KOF Zigbee Fan Controller - Light Child Device", "${device.deviceNetworkId}-Lamp", null,[completedSetup: true, label: "${device.displayName} LAMP", isComponent: true, componentName: "fanLight", componentLabel: "Fan LAMP"])
+		childDevice = addChildDevice("KOF Zigbee Fan Controller - Light Child Device", "${device.deviceNetworkId}-Lamp", null,[completedSetup: true, label: "${device.displayName} LAMP", isComponent: false, componentName: "fanLight", componentLabel: "Fan LAMP"])
         response(refresh() + configure())
         log.info "Creating child light ${childDevice}" 
     }
