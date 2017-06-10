@@ -5,9 +5,17 @@
    This smartapp provides automatic control of Low, Medium, High speeds of a ceiling fan using 
    any temperature sensor with optional motion override. 
    It requires two hardware devices; any temperature sensor and a dimmer type smart fan controller
-   such as the GE 12730 or Leviton VRF01-1LX
+   such as the GE 12730 or Leviton VRF01-1LX. Incorporates contributions from:
    
+   Eric Vitale (https://github.com/ericvitale/SmartThingsPublic/blob/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
+      
   Change Log
+  2017-06-07 Added an option to only turn the fan on during the day (Sun is UP - Between SunRise and SunSet).  by Victor Welasco
+             Added the option to disable the speed control (If nothing is selected speed control will not be evaluated).  by Victor Welasco
+             Will only send a device command if the device is not already on that state.  by Victor Welasco
+  2017-06-03 Added an option to check presence using a presence sensor. - by Victor Welasco
+  2017-04-11 Added 10.0 selection for Fan Differential Temp to mimic single speed control
+  2016-10-19 Ver2 Parent / Child app to allow for multiple use cases with a single install - @ericvitale
   2016-06-30 added dynamic temperature display on temperature setpoint input text
   2016-06-28 x.1 version update
   			added submitOnChange for motion so to skip minutes input next if no motion selected
@@ -58,19 +66,38 @@ definition(
     author: "Dale Coffing",
     description: "Automatic control for 3 Speed Ceiling Fan using Low, Medium, High speeds with any temperature sensor.",
     category: "My Apps",
+    singleInstance: true,
 	iconUrl: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png", 
    	iconX2Url: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft250x250.png",
 	iconX3Url: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft250x250.png",
 )
 
 preferences {
-	page(name: "mainPage")
+    page(name: "startPage")
+    page(name: "parentPage")
+    page(name: "childStartPage")
     page(name: "optionsPage")
     page(name: "aboutPage")
 }
 
-def mainPage() {
-	dynamicPage(name: "mainPage", title: "Select your devices and settings", install: true, uninstall: true) {
+def startPage() {
+    if (parent) {
+        childStartPage()
+    } else {
+        parentPage()
+    }
+}
+
+def parentPage() {
+	return dynamicPage(name: "parentPage", title: "", nextPage: "", install: false, uninstall: true) {
+        section("Create a new fan automation.") {
+            app(name: "childApps", appName: appName(), namespace: "dcoffing", title: "New Fan Automation", multiple: true)
+        }
+    }
+}
+
+def childStartPage() {
+	dynamicPage(name: "childStartPage", title: "Select your devices and settings", install: true, uninstall: true) {
     
         section("Select a room temperature sensor to control the fan..."){
 			input "tempSensor", "capability.temperatureMeasurement", multiple:false, title: "Temperature Sensor", required: true, submitOnChange: true  
@@ -97,10 +124,15 @@ def mainPage() {
         	page: "optionsPage"
         	)
         }
+
+        section("Name") {
+        	label(title: "Assign a name", required: false)
+        }
+
         section("Version Info, User's Guide") {
 // VERSION
 			href (name: "aboutPage", 
-			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:1.1.160630 \n"+"Copyright © 2016 Dale Coffing", 
+			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.170610 \n"+"Copyright © 2016 Dale Coffing", 
 			description: "Tap to get user's guide.",
 			image: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png",
 			required: false,
@@ -112,8 +144,8 @@ def mainPage() {
 
 def optionsPage() {
 	dynamicPage(name: "optionsPage", title: "Configure Optional Settings", install: false, uninstall: false) {
-       	section("Enter the desired differential temp between fan speeds (default=1.0)..."){
-			input "fanDiffTempString", "enum", title: "Fan Differential Temp", options: ["0.5","1.0","1.5","2.0"], required: false
+       	section("Enter the desired differential temp between fan speeds"){
+			input "fanDiffTempString", "enum", title: "Fan Differential Temp", options: ["0.5","1.0","1.5","2.0","10.0"], required: false
 		}
 		section("Enable ceiling fan thermostat only if motion is detected at (optional, leave blank to not require motion)..."){
 			input "motionSensor", "capability.motionSensor", title: "Select Motion device", required: false, submitOnChange: true
@@ -123,16 +155,18 @@ def optionsPage() {
 				input "minutesNoMotion", "number", title: "Minutes?", required: true
 			}
 		}
+		section("Enable ceiling fan thermostat only if someone is present..."){
+			input "presenceSensor", "capability.presenceSensor", title: "Select Presence device", required: false, multiple:true
+		}        
+		section("Enable ceiling fan thermostat only if during the day (Sun is UP)..."){
+			input "sunsetsunrise", "bool", title: "Select True or False:", defaultValue: false, required: false
+		}            
         section("Select ceiling fan operating mode desired (default to 'YES-Auto'..."){
 			input "autoMode", "enum", title: "Enable Ceiling Fan Thermostat?", options: ["NO-Manual","YES-Auto"], required: false
 		}
     	section ("Change SmartApp name, Mode selector") {
-		label title: "Assign a name", required: false
 		mode title: "Set for specific mode(s)", required: false
 		}
-   
-
-	
     }
 }
 
@@ -143,6 +177,8 @@ def aboutPage() {
  		}
 	}
 }
+
+private def appName() { return "${parent ? "3 Speed Fan Automation" : "3 Speed Ceiling Fan Thermostat"}" }
 
 def installed() {
 	log.debug "def INSTALLED with settings: ${settings}"
@@ -157,12 +193,32 @@ def updated() {
 } 
 
 def initialize() {
+
+    if(parent) { 
+    	initChild() 
+    } else {
+    	initParent() 
+    }  
+}
+
+def initChild() {
 	log.debug "def INITIALIZE with settings: ${settings}"
 	subscribe(tempSensor, "temperature", temperatureHandler) //call temperatureHandler method when any reported change to "temperature" attribute
 	if (motionSensor) {
 		subscribe(motionSensor, "motion", motionHandler) //call the motionHandler method when there is any reported change to the "motion" attribute
-	}   
+	}
+ 	if (presenceSensor) {
+		subscribe(presenceSensor, "presence", presenceHandler) //call the presenceHandler method when there is any reported change to the "presence" attribute
+	}
+ 	if (sunsetsunrise) {
+        subscribe(location, "sunset", sunsetsunriseHandler) //call the sunsetsunriseHandler method when the sunset
+        subscribe(location, "sunrise", sunsetsunriseHandler) //call the sunsetsunriseHandler method when the sunrise        
+	}    
 }
+        
+def initParent() {
+	log.debug "Parent Initialized"
+}        
                                    //Event Handler Methods                     
 def temperatureHandler(evt) {
 	log.debug "temperatureHandler called: $evt"	
@@ -172,14 +228,20 @@ def temperatureHandler(evt) {
 
 def handleTemperature(temp) {		//
 	log.debug "handleTemperature called: $evt"	
+    def isSunsetSunrise = betweenSunsetSunRise()
+    def isPresent = someonePresent()
 	def isActive = hasBeenRecentMotion()
-	if (isActive) {
-		//motion detected recently
-		tempCheck(temp, setpoint)
-		log.debug "handleTemperature ISACTIVE($isActive)"
-	}
+	if(isSunsetSunrise && isPresent){
+        if (isActive) {
+            //motion detected recently
+            tempCheck(temp, setpoint)
+            log.debug "handleTemperature ISACTIVE($isActive)"
+        }
+    }
 	else {
-     	fanDimmer.off()
+        if (fanDimmer.currentSwitch != "off") {
+            fanDimmer.off()
+        }
  	}
 }
 
@@ -202,9 +264,47 @@ def motionHandler(evt) {
 			}
 		}
 		else {
-     	    fanDimmer.off()
+            if (fanDimmer.currentSwitch != "off") {
+                fanDimmer.off()
+            }
 		}
 	}
+}
+
+def presenceHandler(evt) {
+	def isPresent = someonePresent()	//define isPresent local variable to returned true or false
+
+    if(isPresent){
+        def lastTemp = tempSensor.currentTemperature // <-- That's a dinamic method currentTemperature you can use the verb current and the name of the ability of any device type
+        log.debug "presenceHandler ACTIVE($isPresent)"
+        if (lastTemp != null) {
+            tempCheck(lastTemp, setpoint)
+        }
+    }
+    else{
+        log.debug "nobody in home turning the fan off!"
+        if (fanDimmer.currentSwitch != "off") {
+            fanDimmer.off()
+        }
+    }
+}
+
+def sunsetsunriseHandler(evt) {
+	def isGoodTime = betweenSunsetSunRise()	//define isPresent local variable to returned true or false
+
+    if(isGoodTime){
+        def lastTemp = tempSensor.currentTemperature // <-- That's a dinamic method currentTemperature you can use the verb current and the name of the ability of any device type
+        log.debug "sunsetsunriseHandler ACTIVE($isGoodTime)"
+        if (lastTemp != null) {
+            tempCheck(lastTemp, setpoint)
+        }
+    }
+    else{
+        log.debug "The sun is down turnning the Fan off if is not already off!"
+        if (fanDimmer.currentSwitch != "off") {
+            fanDimmer.off()
+        }
+    }
 }
 
 private tempCheck(currentTemp, desiredTemp)
@@ -212,47 +312,78 @@ private tempCheck(currentTemp, desiredTemp)
 	log.debug "TEMPCHECK#1(CT=$currentTemp,SP=$desiredTemp,FD=$fanDimmer.currentSwitch,FD_LVL=$fanDimmer.currentLevel, automode=$autoMode,FDTstring=$fanDiffTempString, FDTvalue=$fanDiffTempValue)"
     
     //convert Fan Diff Temp input enum string to number value and if user doesn't select a Fan Diff Temp default to 1.0 
-    def fanDiffTempValue = (settings.fanDiffTempString != null && settings.fanDiffTempString != "") ? Double.parseDouble(settings.fanDiffTempString): 1.0
+    //def fanDiffTempValue = (settings.fanDiffTempString != null && settings.fanDiffTempString != "") ? Double.parseDouble(settings.fanDiffTempString): 1.0
+    def fanDiffTempValueSet = settings.fanDiffTempString
 	
     //if user doesn't select autoMode then default to "YES-Auto"
     def autoModeValue = (settings.autoMode != null && settings.autoMode != "") ? settings.autoMode : "YES-Auto"	
-    
-    def LowDiff = fanDiffTempValue*1 
-    def MedDiff = fanDiffTempValue*2
-    def HighDiff = fanDiffTempValue*3
 	
 	log.debug "TEMPCHECK#2(CT=$currentTemp,SP=$desiredTemp,FD=$fanDimmer.currentSwitch,FD_LVL=$fanDimmer.currentLevel, automode=$autoMode,FDTstring=$fanDiffTempString, FDTvalue=$fanDiffTempValue)"
 	if (autoModeValue == "YES-Auto") {
-    	switch (currentTemp - desiredTemp) {
-        	case { it  >= HighDiff }:
-        		// turn on fan high speed
-       			fanDimmer.setLevel(90) 
-            	log.debug "HI speed(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, HighDiff=$HighDiff)"
-	        break  //exit switch statement 
-		case { it >= MedDiff }:
-            	// turn on fan medium speed
-            	fanDimmer.setLevel(60)
-            	log.debug "MED speed(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, MedDiff=$MedDiff)"
-                break
-       		case { it >= LowDiff }:
-            	// turn on fan low speed
-            	if (fanDimmer.currentSwitch == "off") {		// if fan is OFF to make it easier on motor by   
-            		fanDimmer.setLevel(90)					// starting fan in High speed temporarily then 
-                	fanDimmer.setLevel(30, [delay: 1000])	// change to Low speed after 1 second
-                	log.debug "LO speed after HI 3secs(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, LowDiff=$LowDiff)"
-          		} else {
-                	fanDimmer.setLevel(30)	//fan is already running, not necessary to protect motor
-            	}							//set Low speed immediately
-            	log.debug "LO speed immediately(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, LowDiff=$LowDiff)"
-                break
-		default:
-            	// check to see if fan should be turned off
-            	if (desiredTemp - currentTemp >= 0 ) {	//below or equal to setpoint, turn off fan, zero level
-            		fanDimmer.off()
-            		log.debug "below SP+Diff=fan OFF (CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, FD=$fanDimmer.currentSwitch,autoMode=$autoMode,)"
-				} 
-                log.debug "autoMode YES-MANUAL? else OFF(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, FD=$fanDimmer.currentSwitch,autoMode=$autoMode,)"
-        }	
+        if(fanDiffTempValueSet){
+            def fanDiffTempValue = (settings.fanDiffTempString != null && settings.fanDiffTempString != "") ? Double.parseDouble(settings.fanDiffTempString): 1.0
+            def LowDiff = fanDiffTempValue*1 
+            def MedDiff = fanDiffTempValue*2
+            def HighDiff = fanDiffTempValue*3            
+            switch (currentTemp - desiredTemp) {
+                case { it  >= HighDiff }:
+                    // turn on fan high speed
+                    if(fanDimmer.currentLevel != 90){
+                        fanDimmer.setLevel(90)
+                    }
+                    log.debug "HI speed(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, HighDiff=$HighDiff)"
+                break  //exit switch statement 
+                case { it >= MedDiff }:
+                        // turn on fan medium speed
+                        if(fanDimmer.currentLevel != 60){
+                            fanDimmer.setLevel(60)
+                        }
+                        log.debug "MED speed(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, MedDiff=$MedDiff)"
+                        break
+                case { it >= LowDiff }:
+                    // turn on fan low speed
+                    if (fanDimmer.currentSwitch == "off") {		// if fan is OFF to make it easier on motor by   
+                        fanDimmer.setLevel(90)					// starting fan in High speed temporarily then 
+                        fanDimmer.setLevel(30, [delay: 5000])	// change to Low speed after 5 second
+                        log.debug "LO speed after HI 3secs(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, LowDiff=$LowDiff)"
+                    } else {
+                        if(fanDimmer.currentLevel != 30){
+                            fanDimmer.setLevel(30)	//fan is already running, not necessary to protect motor
+                        }                           //set Low speed immediately
+                    }							    
+                    log.debug "LO speed immediately(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, LowDiff=$LowDiff)"
+                    break
+            default:
+                    // check to see if fan should be turned off
+                    if (desiredTemp - currentTemp >= 0 ) {	//below or equal to setpoint, turn off fan, zero level
+                        if (fanDimmer.currentSwitch != "off") {
+                            fanDimmer.off()
+                        }
+                        log.debug "below SP+Diff=fan OFF (CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, FD=$fanDimmer.currentSwitch,autoMode=$autoMode,)"
+                    } 
+                    log.debug "autoMode YES-MANUAL? else OFF(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, FD=$fanDimmer.currentSwitch,autoMode=$autoMode,)"
+            }	
+        }
+        else{
+            // In case the differential temp is off we will just turn it on or off not checking the fan speed
+            // defining difftemp - if it's a positive value turn the fan on or turn the fan off
+            log.debug "differential temp is off checking if we must turn it on! (CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel)"
+            def diffTemp = currentTemp - desiredTemp
+            if(diffTemp >= 0){
+                log.debug "Turrning the Fan On if it's not already on (CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel)"
+                if (fanDimmer.currentSwitch != "on") {
+                    log.debug "Fan wasn't running, turnning it On"
+                    fanDimmer.setLevel(99)
+                }
+            }
+            else{
+                log.debug "below SP+Diff=fan OFF if it's not already off (CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, FD=$fanDimmer.currentSwitch,autoMode=$autoMode,)"
+                if (fanDimmer.currentSwitch != "off") {
+                    log.debug "Fan was running, turnning it Off"
+                    fanDimmer.off()
+                }                
+            }
+        }
 	}	
 }
 
@@ -275,6 +406,39 @@ private hasBeenRecentMotion()
 	isActive
 }
 
+private someonePresent()
+{
+	def isPresent = false
+	if (presenceSensor) {
+        def currPresenceDevice = presenceSensor.currentPresence
+        def presentPresenceDevices = currPresenceDevice.findAll {
+                deviceVal -> deviceVal == "present" ? true : false
+            }
+        log.debug "Amount of devices that are currently present: ${presentPresenceDevices.size()} of ${presenceSensor.size()}"
+        if(presentPresenceDevices.size() >= 1){
+            isPresent = true
+        }
+	}
+	else {
+		isPresent = true
+	}
+	isPresent
+}
+
+private betweenSunsetSunRise()
+{
+    def isGoodTime = false
+    def s = getSunriseAndSunset(zipCode: zipCode, sunriseOffset: sunriseOffset, sunsetOffset: sunsetOffset)
+    def now = new Date()
+    def sunriseTime = s.sunrise
+	def sunsetTime = s.sunset
+    if(sunsetTime.after(now) || sunriseTime.before(now)) {   //before midnight/after sunset or after midnight/before sunset (checking if the Sun is UP)
+	  	log.info "Sun is UP"
+        isGoodTime = true
+    }
+    isGoodTime
+}
+
 private def textHelp() {
 	def text =
 		"This smartapp provides automatic control of Low, Medium, High speeds of a"+
@@ -293,4 +457,4 @@ private def textHelp() {
         "@ChadCK's 'Z-Wave Smart Fan Control Custom Device Handler' along with hardware"+
         " designed specifically for motor control such as the GE 12730 Z-Wave Smart Fan Control or"+
         " Leviton VRF01-1LX works well together with this smartapp."
-	}
+}
