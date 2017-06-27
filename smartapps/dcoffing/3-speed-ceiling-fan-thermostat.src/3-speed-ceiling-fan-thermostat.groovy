@@ -10,6 +10,11 @@
    Eric Vitale (https://github.com/ericvitale/SmartThingsPublic/blob/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
       
   Change Log
+  2017-06-27 Checking if the Switch was not physically turned On, if so stop all checks until it's physically turned OFF.
+                Very usefull when you would like to turn the switch on at any time and don't want the switch be truning off on every temperature event change. by Victor Welasco
+                INFO: The isPhysical() have a bug and can not be used. (https://community.smartthings.com/t/device-physical-vs-digital-digital-physical-triggers/6229/11)
+                Workaround: I create a global variable that will control if the app turned the switch on or off.
+             Fix a bug on sunrise and sunset that was been evaluated all the time, now if is off the check is off we will stop evaluating it. by Victor Welasco
   2017-06-07 Added an option to only turn the fan on during the day (Sun is UP - Between SunRise and SunSet).  by Victor Welasco
              Added the option to disable the speed control (If nothing is selected speed control will not be evaluated).  by Victor Welasco
              Will only send a device command if the device is not already on that state.  by Victor Welasco
@@ -132,7 +137,7 @@ def childStartPage() {
         section("Version Info, User's Guide") {
 // VERSION
 			href (name: "aboutPage", 
-			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.170610 \n"+"Copyright © 2016 Dale Coffing", 
+			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.270610 \n"+"Copyright © 2016 Dale Coffing", 
 			description: "Tap to get user's guide.",
 			image: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png",
 			required: false,
@@ -203,7 +208,8 @@ def initialize() {
 
 def initChild() {
 	log.debug "def INITIALIZE with settings: ${settings}"
-	subscribe(tempSensor, "temperature", temperatureHandler) //call temperatureHandler method when any reported change to "temperature" attribute
+    //state.switchTurnedOnbyApp = false
+    subscribe(tempSensor, "temperature", temperatureHandler) //call temperatureHandler method when any reported change to "temperature" attribute
 	if (motionSensor) {
 		subscribe(motionSensor, "motion", motionHandler) //call the motionHandler method when there is any reported change to the "motion" attribute
 	}
@@ -227,22 +233,30 @@ def temperatureHandler(evt) {
 }
 
 def handleTemperature(temp) {		//
-	log.debug "handleTemperature called: $evt"	
+	log.debug "handleTemperature called: $evt"
     def isSunsetSunrise = betweenSunsetSunRise()
     def isPresent = someonePresent()
 	def isActive = hasBeenRecentMotion()
-	if(isSunsetSunrise && isPresent){
-        if (isActive) {
-            //motion detected recently
-            tempCheck(temp, setpoint)
-            log.debug "handleTemperature ISACTIVE($isActive)"
+	def isSmartAppTurnedSwitchOn = smartAppTurnedSwitchOn()
+	log.debug "isSmartAppTurnedSwitchOn = ${isSmartAppTurnedSwitchOn}"
+    
+    if(fanDimmer.currentSwitch == "off" || isSmartAppTurnedSwitchOn){
+        if(isSunsetSunrise && isPresent){
+            if (isActive) {
+                //motion detected recently
+                tempCheck(temp, setpoint)
+                log.debug "handleTemperature ISACTIVE($isActive)"
+            }
+        }
+        else {
+            if (fanDimmer.currentSwitch != "off") {
+                switchOff()
+            }
         }
     }
-	else {
-        if (fanDimmer.currentSwitch != "off") {
-            fanDimmer.off()
-        }
- 	}
+    else{
+        log.debug "The Fan Switch was manually turned On, skipping all checks until it's manually turned off!"
+    }
 }
 
 def motionHandler(evt) {
@@ -251,7 +265,7 @@ def motionHandler(evt) {
 		def lastTemp = tempSensor.currentTemperature
 		log.debug "motionHandler ACTIVE($isActive)"
 		if (lastTemp != null) {
-			tempCheck(lastTemp, setpoint)
+			handleTemperature(lastTemp)
 		}
 	} else if (evt.value == "inactive") {		//testing to see if evt.value is indeed equal to "inactive" (vs evt.value to "active")
 		//motion stopped
@@ -260,51 +274,25 @@ def motionHandler(evt) {
 		if (isActive) {
 			def lastTemp = tempSensor.currentTemperature
 			if (lastTemp != null) {				//lastTemp not equal to null (value never been set) 
-				tempCheck(lastTemp, setpoint)
+				handleTemperature(lastTemp)
 			}
 		}
 		else {
             if (fanDimmer.currentSwitch != "off") {
-                fanDimmer.off()
+                switchOff()
             }
 		}
 	}
 }
 
 def presenceHandler(evt) {
-	def isPresent = someonePresent()	//define isPresent local variable to returned true or false
-
-    if(isPresent){
-        def lastTemp = tempSensor.currentTemperature // <-- That's a dinamic method currentTemperature you can use the verb current and the name of the ability of any device type
-        log.debug "presenceHandler ACTIVE($isPresent)"
-        if (lastTemp != null) {
-            tempCheck(lastTemp, setpoint)
-        }
-    }
-    else{
-        log.debug "nobody in home turning the fan off!"
-        if (fanDimmer.currentSwitch != "off") {
-            fanDimmer.off()
-        }
-    }
+	def lastTemp = tempSensor.currentTemperature
+    handleTemperature(lastTemp)
 }
 
 def sunsetsunriseHandler(evt) {
-	def isGoodTime = betweenSunsetSunRise()	//define isPresent local variable to returned true or false
-
-    if(isGoodTime){
-        def lastTemp = tempSensor.currentTemperature // <-- That's a dinamic method currentTemperature you can use the verb current and the name of the ability of any device type
-        log.debug "sunsetsunriseHandler ACTIVE($isGoodTime)"
-        if (lastTemp != null) {
-            tempCheck(lastTemp, setpoint)
-        }
-    }
-    else{
-        log.debug "The sun is down turnning the Fan off if is not already off!"
-        if (fanDimmer.currentSwitch != "off") {
-            fanDimmer.off()
-        }
-    }
+	def lastTemp = tempSensor.currentTemperature
+    handleTemperature(lastTemp)
 }
 
 private tempCheck(currentTemp, desiredTemp)
@@ -329,26 +317,26 @@ private tempCheck(currentTemp, desiredTemp)
                 case { it  >= HighDiff }:
                     // turn on fan high speed
                     if(fanDimmer.currentLevel != 90){
-                        fanDimmer.setLevel(90)
+                        switchOnLevel(90)
                     }
                     log.debug "HI speed(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, HighDiff=$HighDiff)"
                 break  //exit switch statement 
                 case { it >= MedDiff }:
                         // turn on fan medium speed
                         if(fanDimmer.currentLevel != 60){
-                            fanDimmer.setLevel(60)
+                            switchOnLevel(60)
                         }
                         log.debug "MED speed(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, MedDiff=$MedDiff)"
                         break
                 case { it >= LowDiff }:
                     // turn on fan low speed
                     if (fanDimmer.currentSwitch == "off") {		// if fan is OFF to make it easier on motor by   
-                        fanDimmer.setLevel(90)					// starting fan in High speed temporarily then 
-                        fanDimmer.setLevel(30, [delay: 5000])	// change to Low speed after 5 second
+                        switchOnLevel(90)					// starting fan in High speed temporarily then 
+                        switchOnLevel(30, [delay: 5000])	// change to Low speed after 5 second
                         log.debug "LO speed after HI 3secs(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, LowDiff=$LowDiff)"
                     } else {
                         if(fanDimmer.currentLevel != 30){
-                            fanDimmer.setLevel(30)	//fan is already running, not necessary to protect motor
+                            switchOnLevel(30)	//fan is already running, not necessary to protect motor
                         }                           //set Low speed immediately
                     }							    
                     log.debug "LO speed immediately(CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, LowDiff=$LowDiff)"
@@ -357,7 +345,7 @@ private tempCheck(currentTemp, desiredTemp)
                     // check to see if fan should be turned off
                     if (desiredTemp - currentTemp >= 0 ) {	//below or equal to setpoint, turn off fan, zero level
                         if (fanDimmer.currentSwitch != "off") {
-                            fanDimmer.off()
+                            switchOff()
                         }
                         log.debug "below SP+Diff=fan OFF (CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, FD=$fanDimmer.currentSwitch,autoMode=$autoMode,)"
                     } 
@@ -373,14 +361,14 @@ private tempCheck(currentTemp, desiredTemp)
                 log.debug "Turrning the Fan On if it's not already on (CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel)"
                 if (fanDimmer.currentSwitch != "on") {
                     log.debug "Fan wasn't running, turnning it On"
-                    fanDimmer.setLevel(99)
+                    switchOnLevel(99)
                 }
             }
             else{
                 log.debug "below SP+Diff=fan OFF if it's not already off (CT=$currentTemp, SP=$desiredTemp, FD-LVL=$fanDimmer.currentLevel, FD=$fanDimmer.currentSwitch,autoMode=$autoMode,)"
                 if (fanDimmer.currentSwitch != "off") {
                     log.debug "Fan was running, turnning it Off"
-                    fanDimmer.off()
+                    switchOff()
                 }                
             }
         }
@@ -428,15 +416,49 @@ private someonePresent()
 private betweenSunsetSunRise()
 {
     def isGoodTime = false
-    def s = getSunriseAndSunset(zipCode: zipCode, sunriseOffset: sunriseOffset, sunsetOffset: sunsetOffset)
-    def now = new Date()
-    def sunriseTime = s.sunrise
-	def sunsetTime = s.sunset
-    if(sunsetTime.after(now) || sunriseTime.before(now)) {   //before midnight/after sunset or after midnight/before sunset (checking if the Sun is UP)
-	  	log.info "Sun is UP"
+
+    if(sunsetsunrise){
+        def s = getSunriseAndSunset(zipCode: zipCode, sunriseOffset: sunriseOffset, sunsetOffset: sunsetOffset)
+        def now = new Date()
+        def sunriseTime = s.sunrise
+        def sunsetTime = s.sunset
+        if(sunsetTime.after(now) || sunriseTime.before(now)) {   //before midnight/after sunset or after midnight/before sunset (checking if the Sun is UP)
+            log.info "Sun is UP"
+            isGoodTime = true
+        }
+    }
+    else{
         isGoodTime = true
     }
     isGoodTime
+}
+
+private smartAppTurnedSwitchOn()
+{
+    def isSwitchTurnedOnbyApp = state.switchTurnedOnbyApp
+    log.debug "isSwitchTurnedOnbyApp is ${state.switchTurnedOnbyApp}"
+    isSwitchTurnedOnbyApp
+}
+
+private switchOn()
+{
+    state.switchTurnedOnbyApp = true
+    log.debug "switchOn: state.switchTurnedOnbyApp is ${state.switchTurnedOnbyApp}"
+    fanDimmer.on()
+}
+
+private switchOnLevel(level)
+{
+    state.switchTurnedOnbyApp = true
+    log.debug "switchOnLevel: state.switchTurnedOnbyApp is ${state.switchTurnedOnbyApp}"
+    fanDimmer.setLevel(level)
+}
+
+private switchOff()
+{
+    state.switchTurnedOnbyApp = false
+    log.debug "switchOff: state.switchTurnedOnbyApp is ${state.switchTurnedOnbyApp}"
+    fanDimmer.off()
 }
 
 private def textHelp() {
