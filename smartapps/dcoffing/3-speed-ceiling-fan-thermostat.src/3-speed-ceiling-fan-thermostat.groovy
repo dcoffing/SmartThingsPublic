@@ -8,8 +8,10 @@
    such as the GE 12730 or Leviton VRF01-1LX. Incorporates contributions from:
    
    Eric Vitale (https://github.com/ericvitale/SmartThingsPublic/blob/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
-      
+   Victor Welasco (https://github.com/Welasco/SmartThingsPublic/blob/VictorWelasco/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
+
   Change Log
+  2017-06-29 Fixed SmartApp Mode, now if you select a specific Mode the App will only run if the mode is on. by Victor Wealasco
   2017-06-27 Checking if the Switch was not physically turned On, if so stop all checks until it's physically turned OFF.
                 Very usefull when you would like to turn the switch on at any time and don't want the switch be truning off on every temperature event change. by Victor Welasco
                 INFO: The isPhysical() have a bug and can not be used. (https://community.smartthings.com/t/device-physical-vs-digital-digital-physical-triggers/6229/11)
@@ -137,7 +139,7 @@ def childStartPage() {
         section("Version Info, User's Guide") {
 // VERSION
 			href (name: "aboutPage", 
-			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.270610 \n"+"Copyright © 2016 Dale Coffing", 
+			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.290610 \n"+"Copyright © 2016 Dale Coffing", 
 			description: "Tap to get user's guide.",
 			image: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png",
 			required: false,
@@ -170,7 +172,8 @@ def optionsPage() {
 			input "autoMode", "enum", title: "Enable Ceiling Fan Thermostat?", options: ["NO-Manual","YES-Auto"], required: false
 		}
     	section ("Change SmartApp name, Mode selector") {
-		mode title: "Set for specific mode(s)", required: false
+		    //mode title: "Set for specific mode(s)", required: false
+            input "modes", "mode", title: "select a mode(s)", required: false, multiple: true
 		}
     }
 }
@@ -220,6 +223,9 @@ def initChild() {
         subscribe(location, "sunset", sunsetsunriseHandler) //call the sunsetsunriseHandler method when the sunset
         subscribe(location, "sunrise", sunsetsunriseHandler) //call the sunsetsunriseHandler method when the sunrise        
 	}    
+    if (modes){
+        subscribe(location, "mode", modeChangeHandler)
+    }
 }
         
 def initParent() {
@@ -238,10 +244,10 @@ def handleTemperature(temp) {		//
     def isPresent = someonePresent()
 	def isActive = hasBeenRecentMotion()
 	def isSmartAppTurnedSwitchOn = smartAppTurnedSwitchOn()
-	log.debug "isSmartAppTurnedSwitchOn = ${isSmartAppTurnedSwitchOn}"
+    def isCheckMode = checkMode()
     
     if(fanDimmer.currentSwitch == "off" || isSmartAppTurnedSwitchOn){
-        if(isSunsetSunrise && isPresent){
+        if(isSunsetSunrise && isPresent && isCheckMode){
             if (isActive) {
                 //motion detected recently
                 tempCheck(temp, setpoint)
@@ -292,6 +298,11 @@ def presenceHandler(evt) {
 
 def sunsetsunriseHandler(evt) {
 	def lastTemp = tempSensor.currentTemperature
+    handleTemperature(lastTemp)
+}
+
+def modeChangeHandler(evt){
+    def lastTemp = tempSensor.currentTemperature
     handleTemperature(lastTemp)
 }
 
@@ -459,6 +470,25 @@ private switchOff()
     state.switchTurnedOnbyApp = false
     log.debug "switchOff: state.switchTurnedOnbyApp is ${state.switchTurnedOnbyApp}"
     fanDimmer.off()
+}
+
+private checkMode()
+{
+    def isModeON = false
+
+    if(modes){
+        def currentModestatus = location.currentMode
+        def selectedModes = modes.findAll {
+                selMode -> selMode.toString() == currentModestatus.toString() ? true : false
+            }
+        if(selectedModes.size() >= 1){
+            isModeON = true
+        }
+    }
+    else{
+        isModeON = true
+    }
+    isModeON
 }
 
 private def textHelp() {
