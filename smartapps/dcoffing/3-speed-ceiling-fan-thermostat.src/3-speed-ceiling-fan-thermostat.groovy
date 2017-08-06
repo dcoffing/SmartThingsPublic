@@ -11,6 +11,8 @@
    Victor Welasco (https://github.com/Welasco/SmartThingsPublic/blob/VictorWelasco/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
 
   Change Log
+  2017-08-05 Fixed Motion Sensor using SM sample: http://docs.smartthings.com/en/latest/getting-started/first-smartapp.html. by Victor Welasco
+             Fixed SunSet SunRise bug, now we are using timeOfDayIsBetween. by Victor Welasco
   2017-06-29 Fixed SmartApp Mode, now if you select a specific Mode the App will only run if the mode is on. by Victor Wealasco
   2017-06-27 Checking if the Switch was not physically turned On, if so stop all checks until it's physically turned OFF.
                 Very usefull when you would like to turn the switch on at any time and don't want the switch be truning off on every temperature event change. by Victor Welasco
@@ -139,7 +141,7 @@ def childStartPage() {
         section("Version Info, User's Guide") {
 // VERSION
 			href (name: "aboutPage", 
-			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.290610 \n"+"Copyright © 2016 Dale Coffing", 
+			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.080517 \n"+"Copyright © 2016 Dale Coffing", 
 			description: "Tap to get user's guide.",
 			image: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png",
 			required: false,
@@ -197,7 +199,7 @@ def updated() {
 	log.debug "def UPDATED with settings: ${settings}"
 	unsubscribe()
 	initialize()
-    handleTemperature(tempSensor.currentTemperature) //call handleTemperature to bypass temperatureHandler method 
+    handleTemperature(tempSensor.currentTemperature) //call handleTemperature to bypass temperatureHandler method
 } 
 
 def initialize() {
@@ -214,7 +216,8 @@ def initChild() {
     //state.switchTurnedOnbyApp = false
     subscribe(tempSensor, "temperature", temperatureHandler) //call temperatureHandler method when any reported change to "temperature" attribute
 	if (motionSensor) {
-		subscribe(motionSensor, "motion", motionHandler) //call the motionHandler method when there is any reported change to the "motion" attribute
+		subscribe(motionSensor, "motion.active", motionDetectedHandler) //call the motionDetectedHandler method when there is any reported change to the "motion active" attribute
+        subscribe(motionSensor, "motion.inactive", motionStoppedHandler) //call the motionStoppedHandler method when there is any reported change to the "motion inactive" attribute
 	}
  	if (presenceSensor) {
 		subscribe(presenceSensor, "presence", presenceHandler) //call the presenceHandler method when there is any reported change to the "presence" attribute
@@ -242,16 +245,21 @@ def handleTemperature(temp) {		//
 	log.debug "handleTemperature called: $evt"
     def isSunsetSunrise = betweenSunsetSunRise()
     def isPresent = someonePresent()
-	def isActive = hasBeenRecentMotion()
+	def isMotionActive = hasBeenRecentMotion()
 	def isSmartAppTurnedSwitchOn = smartAppTurnedSwitchOn()
     def isCheckMode = checkMode()
     
     if(fanDimmer.currentSwitch == "off" || isSmartAppTurnedSwitchOn){
         if(isSunsetSunrise && isPresent && isCheckMode){
-            if (isActive) {
+            if (isMotionActive) {
                 //motion detected recently
                 tempCheck(temp, setpoint)
-                log.debug "handleTemperature ISACTIVE($isActive)"
+                log.debug "handleTemperature ISACTIVE($isMotionActive)"
+            }
+            else {
+                if (fanDimmer.currentSwitch != "off") {
+                    switchOff()
+                }
             }
         }
         else {
@@ -265,30 +273,24 @@ def handleTemperature(temp) {		//
     }
 }
 
-def motionHandler(evt) {
-	if (evt.value == "active") {
-		//motion detected
-		def lastTemp = tempSensor.currentTemperature
-		log.debug "motionHandler ACTIVE($isActive)"
-		if (lastTemp != null) {
-			handleTemperature(lastTemp)
-		}
-	} else if (evt.value == "inactive") {		//testing to see if evt.value is indeed equal to "inactive" (vs evt.value to "active")
-		//motion stopped
-		def isActive = hasBeenRecentMotion()	//define isActive local variable to returned true or false
-		log.debug "motionHandler INACTIVE($isActive)"
-		if (isActive) {
-			def lastTemp = tempSensor.currentTemperature
-			if (lastTemp != null) {				//lastTemp not equal to null (value never been set) 
-				handleTemperature(lastTemp)
-			}
-		}
-		else {
-            if (fanDimmer.currentSwitch != "off") {
-                switchOff()
-            }
-		}
-	}
+def motionDetectedHandler(evt) {
+
+    //log.debug "motionDetectedHandler called: $evt"
+    //theswitch.on()
+
+    //motion detected
+    def lastTemp = tempSensor.currentTemperature
+    log.debug "motionHandler ACTIVE($isActive)"
+    if (lastTemp != null) {
+        handleTemperature(lastTemp)
+    }
+}
+
+def motionStoppedHandler(evt) {
+    def lastTemp = tempSensor.currentTemperature
+
+    log.debug "motionStoppedHandler called: $evt"
+    runIn(60 * minutesNoMotion, handleTemperature(lastTemp))
 }
 
 def presenceHandler(evt) {
@@ -389,15 +391,35 @@ private tempCheck(currentTemp, desiredTemp)
 private hasBeenRecentMotion()
 {
 	def isActive = false
-	if (motionSensor && minutes) {
-		def deltaMinutes = minutes as Long
-		if (deltaMinutes) {
-			def motionEvents = motionSensor.eventsSince(new Date(now() - (60000 * deltaMinutes)))
-			log.trace "Found ${motionEvents?.size() ?: 0} events in the last $deltaMinutes minutes"
-			if (motionEvents.find { it.value == "active" }) {
-				isActive = true
-			}
-		}
+	if (motionSensor && minutesNoMotion) {
+        def motionState = motionSensor.currentState("motion")
+		// def deltaMinutes = minutes as Long
+		// if (deltaMinutes) {
+		// 	def motionEvents = motionSensor.eventsSince(new Date(now() - (60000 * deltaMinutes)))
+		// 	log.trace "Found ${motionEvents?.size() ?: 0} events in the last $deltaMinutes minutes"
+		// 	if (motionEvents.find { it.value == "active" }) {
+		// 		isActive = true
+		// 	}
+		// }
+        if (motionSensor.value == "inactive") {
+            // get the time elapsed between now and when the motion reported inactive
+            def elapsed = now() - motionSensor.date.time
+
+            // elapsed time is in milliseconds, so the threshold must be converted to milliseconds too
+            def threshold = 1000 * 60 * minutesNoMotion
+
+            if (elapsed >= threshold) {
+                log.debug "Motion has stayed inactive long enough since last check ($elapsed ms):  turning fan off"
+                isActive = false
+            } else {
+                log.debug "Motion has not stayed inactive long enough since last check ($elapsed ms):  doing nothing"
+                isActive = true
+            }
+        } else {
+            // Motion active; just log it and do nothing
+            log.debug "Motion is active, do nothing and wait for inactive"
+            isActive = true
+        }
 	}
 	else {
 		isActive = true
@@ -433,12 +455,18 @@ private betweenSunsetSunRise()
         def now = new Date()
         def sunriseTime = s.sunrise
         def sunsetTime = s.sunset
-        if(sunsetTime.after(now) || sunriseTime.before(now)) {   //before midnight/after sunset or after midnight/before sunset (checking if the Sun is UP)
+
+        def between = timeOfDayIsBetween(sunsetTime,sunriseTime,now,location.timeZone)
+        log.debug "betweenSunsetSunRise: SunRiseTime: ${sunriseTime} SunSetTime: ${sunsetTime} now: ${now} between: ${between}"
+
+        //if(sunsetTime.after(now) || sunriseTime.before(now)) {   //before midnight/after sunset or after midnight/before sunset (checking if the Sun is UP)
+        if(!between) {   //before midnight/after sunset or after midnight/before sunset (checking if the Sun is UP)
             log.info "Sun is UP"
             isGoodTime = true
         }
     }
     else{
+        log.debug "betweenSunsetSunRise: SunsetSunrise not set. Returning true."
         isGoodTime = true
     }
     isGoodTime
