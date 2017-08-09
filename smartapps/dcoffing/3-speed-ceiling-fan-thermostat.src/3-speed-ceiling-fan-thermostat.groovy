@@ -11,7 +11,7 @@
    Victor Welasco (https://github.com/Welasco/SmartThingsPublic/blob/VictorWelasco/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
 
   Change Log
-  2017-08-05 Fixed Motion Sensor using SM sample: http://docs.smartthings.com/en/latest/getting-started/first-smartapp.html. by Victor Welasco
+  2017-08-09 Fixed Motion Sensor using SM sample: http://docs.smartthings.com/en/latest/getting-started/first-smartapp.html. by Victor Welasco
              Fixed SunSet SunRise bug, now we are using timeOfDayIsBetween. by Victor Welasco
   2017-06-29 Fixed SmartApp Mode, now if you select a specific Mode the App will only run if the mode is on. by Victor Wealasco
   2017-06-27 Checking if the Switch was not physically turned On, if so stop all checks until it's physically turned OFF.
@@ -141,7 +141,7 @@ def childStartPage() {
         section("Version Info, User's Guide") {
 // VERSION
 			href (name: "aboutPage", 
-			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.080517 \n"+"Copyright © 2016 Dale Coffing", 
+			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.080917 \n"+"Copyright © 2016 Dale Coffing", 
 			description: "Tap to get user's guide.",
 			image: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png",
 			required: false,
@@ -290,7 +290,7 @@ def motionStoppedHandler(evt) {
     def lastTemp = tempSensor.currentTemperature
 
     log.debug "motionStoppedHandler called: $evt"
-    runIn(60 * minutesNoMotion, handleTemperature(lastTemp))
+    runIn(60 * minutesNoMotion, motionscheduledStopped)
 }
 
 def presenceHandler(evt) {
@@ -388,6 +388,12 @@ private tempCheck(currentTemp, desiredTemp)
 	}	
 }
 
+def motionscheduledStopped()
+{
+	def lastTemp = tempSensor.currentTemperature
+    handleTemperature(lastTemp)
+}
+
 private hasBeenRecentMotion()
 {
 	def isActive = false
@@ -401,9 +407,9 @@ private hasBeenRecentMotion()
 		// 		isActive = true
 		// 	}
 		// }
-        if (motionSensor.value == "inactive") {
+        if (motionState.value == "inactive") {
             // get the time elapsed between now and when the motion reported inactive
-            def elapsed = now() - motionSensor.date.time
+            def elapsed = now() - motionState.date.time
 
             // elapsed time is in milliseconds, so the threshold must be converted to milliseconds too
             def threshold = 1000 * 60 * minutesNoMotion
