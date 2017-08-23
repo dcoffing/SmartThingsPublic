@@ -1,22 +1,16 @@
 /*
    Virtual Thermostat for 3 Speed Ceiling Fan Control
    Copyright 2016 SmartThings, Dale Coffing
-    
+   
    This smartapp provides automatic control of Low, Medium, High speeds of a ceiling fan using 
    any temperature sensor with optional motion override. 
    It requires two hardware devices; any temperature sensor and a dimmer type smart fan controller
    such as the GE 12730 or Leviton VRF01-1LX. Incorporates contributions from:
-<<<<<<< HEAD
-=======
-   
-   Eric Vitale (https://github.com/ericvitale/SmartThingsPublic/blob/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
->>>>>>> upstream/master
    
    Eric Vitale (https://github.com/ericvitale/SmartThingsPublic/blob/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
    Victor Welasco (https://github.com/Welasco/SmartThingsPublic/blob/VictorWelasco/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3-speed-ceiling-fan-thermostat.groovy)
 
   Change Log
-<<<<<<< HEAD
   2017-08-09 Fixed Motion Sensor using SM sample: http://docs.smartthings.com/en/latest/getting-started/first-smartapp.html. by Victor Welasco
              Fixed SunSet SunRise bug, now we are using timeOfDayIsBetween. by Victor Welasco
   2017-06-29 Fixed SmartApp Mode, now if you select a specific Mode the App will only run if the mode is on. by Victor Wealasco
@@ -29,8 +23,6 @@
              Added the option to disable the speed control (If nothing is selected speed control will not be evaluated).  by Victor Welasco
              Will only send a device command if the device is not already on that state.  by Victor Welasco
   2017-06-03 Added an option to check presence using a presence sensor. - by Victor Welasco
-=======
->>>>>>> upstream/master
   2017-04-11 Added 10.0 selection for Fan Differential Temp to mimic single speed control
   2016-10-19 Ver2 Parent / Child app to allow for multiple use cases with a single install - @ericvitale
   2016-06-30 added dynamic temperature display on temperature setpoint input text
@@ -90,7 +82,6 @@ definition(
 )
 
 preferences {
-<<<<<<< HEAD
     page(name: "startPage")
     page(name: "parentPage")
     page(name: "childStartPage")
@@ -106,23 +97,6 @@ def startPage() {
     }
 }
 
-=======
-        page(name: "startPage")
-        page(name: "parentPage")
-        page(name: "childStartPage")
-        page(name: "optionsPage")
-        page(name: "aboutPage")
-}
-
-def startPage() {
-    if (parent) {
-        childStartPage()
-    } else {
-        parentPage()
-    }
-}
-
->>>>>>> upstream/master
 def parentPage() {
 	return dynamicPage(name: "parentPage", title: "", nextPage: "", install: false, uninstall: true) {
         section("Create a new fan automation.") {
@@ -159,7 +133,6 @@ def childStartPage() {
         	page: "optionsPage"
         	)
         }
-<<<<<<< HEAD
 
         section("Name") {
         	label(title: "Assign a name", required: false)
@@ -169,17 +142,6 @@ def childStartPage() {
 // VERSION
 			href (name: "aboutPage", 
 			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:3.080917 \n"+"Copyright © 2016 Dale Coffing", 
-=======
-        
-        section("Name") {
-        	label(title: "Assign a name", required: false)
-        }
-        
-        section("Version Info, User's Guide") {
-// VERSION
-			href (name: "aboutPage", 
-			title: "3 Speed Ceiling Fan Thermostat \n"+"Version:2.170411 \n"+"Copyright © 2016 Dale Coffing", 
->>>>>>> upstream/master
 			description: "Tap to get user's guide.",
 			image: "https://raw.githubusercontent.com/dcoffing/SmartThingsPublic/master/smartapps/dcoffing/3-speed-ceiling-fan-thermostat.src/3scft125x125.png",
 			required: false,
@@ -191,11 +153,7 @@ def childStartPage() {
 
 def optionsPage() {
 	dynamicPage(name: "optionsPage", title: "Configure Optional Settings", install: false, uninstall: false) {
-<<<<<<< HEAD
        	section("Enter the desired differential temp between fan speeds"){
-=======
-       	section("Enter the desired differential temp between fan speeds (default=1.0)..."){
->>>>>>> upstream/master
 			input "fanDiffTempString", "enum", title: "Fan Differential Temp", options: ["0.5","1.0","1.5","2.0","10.0"], required: false
 		}
 		section("Enable ceiling fan thermostat only if motion is detected at (optional, leave blank to not require motion)..."){
@@ -216,12 +174,8 @@ def optionsPage() {
 			input "autoMode", "enum", title: "Enable Ceiling Fan Thermostat?", options: ["NO-Manual","YES-Auto"], required: false
 		}
     	section ("Change SmartApp name, Mode selector") {
-<<<<<<< HEAD
 		    //mode title: "Set for specific mode(s)", required: false
             input "modes", "mode", title: "select a mode(s)", required: false, multiple: true
-=======
-		mode title: "Set for specific mode(s)", required: false
->>>>>>> upstream/master
 		}
     }
 }
@@ -245,13 +199,8 @@ def updated() {
 	log.debug "def UPDATED with settings: ${settings}"
 	unsubscribe()
 	initialize()
-<<<<<<< HEAD
     handleTemperature(tempSensor.currentTemperature) //call handleTemperature to bypass temperatureHandler method
 } 
-=======
-    handleTemperature(tempSensor.currentTemperature) //call handleTemperature to bypass temperatureHandler method 
-}
->>>>>>> upstream/master
 
 def initialize() {
 
@@ -281,17 +230,10 @@ def initChild() {
         subscribe(location, "mode", modeChangeHandler)
     }
 }
-<<<<<<< HEAD
         
 def initParent() {
 	log.debug "Parent Initialized"
 }        
-=======
-
-def initParent() {
-	log.debug "Parent Initialized"
-}
->>>>>>> upstream/master
                                    //Event Handler Methods                     
 def temperatureHandler(evt) {
 	log.debug "temperatureHandler called: $evt"	
